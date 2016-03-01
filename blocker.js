@@ -1,28 +1,30 @@
 var exec = require("child_process").exec;
 
-var regex, callback;
-
-function logger(request) {
-    console.log(`Blocking ${request.ip} for ${request.path}`);
-}
+var predicate, callback;
 
 function middleware(request, response, next) {
-    if (request.path.search(regex) >= 0) {
-        var ip = request.ip;
-        ip = ip.slice(ip.lastIndexOf(":") + 1);
+    if (predicate(request)) {
         if (callback) {
             callback(request);
         }
-        exec(`iptables -A INPUT -s ${ip} -j DROP`);
+        var ip = request.ip;
+        exec(`iptables -A INPUT -s ${ip.slice(ip.lastIndexOf(":") + 1)} -j DROP`);
     }
     else {
         next();
     }
 }
 
-module.exports = (pattern, blockCallback) => {
-    regex = pattern;
+function regexToPredicate(regex) {
+    return request => request.path.search(regex) >= 0;
+}
+
+module.exports = (blockPredicate, blockCallback) => {
+    if (blockPredicate instanceof RegExp) {
+        blockPredicate = regexToPredicate(blockPredicate);
+    }
+    predicate = blockPredicate;
     callback = blockCallback;
     return middleware;
 };
-module.exports.logger = logger;
+module.exports.logger = request => console.log(`Blocking ${request.ip} for ${request.path}`);
