@@ -10,5 +10,5 @@ function blocker(logger) {
     };
 }
 
-module.exports = logger => blocker(logger);
+module.exports = blocker;
 module.exports.logger = request => console.log(`Blocking ${request.ip} for ${request.path}`);
